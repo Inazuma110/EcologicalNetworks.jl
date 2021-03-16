@@ -15,7 +15,7 @@ Electronics Engineers (IEEE). https://doi.org/10.1109/wi-iat.2009.15
 """
 function lp(N::T) where {T<:AbstractEcologicalNetwork}
   L = Dict([species(N)[i]=>i for i in 1:richness(N)])
-  
+
   neighbors_b = Dict([s=>N[:,s] for s in species(N, dims=2)])
   neighbors_t = Dict([s=>N[s,:] for s in species(N, dims=1)])
 

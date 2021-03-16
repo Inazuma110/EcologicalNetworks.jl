@@ -41,18 +41,18 @@ abstract type AbstractBipartiteNetwork <: AbstractEcologicalNetwork end
 """
 A bipartite deterministic network is a matrix of boolean values.
 """
-mutable struct BipartiteNetwork{Bool, ST} <: AbstractBipartiteNetwork
-    edges::SparseMatrixCSC{Bool,Int64}
+mutable struct BipartiteNetwork{W, ST} <: AbstractBipartiteNetwork
+    edges::SparseMatrixCSC{W,Int64}
     T::Vector{ST}
     B::Vector{ST}
-    function BipartiteNetwork{Bool, NT}(edges::M, T::Vector{NT}, B::Vector{NT}) where {M<:SparseMatrixCSC, NT}
+    function BipartiteNetwork{W, NT}(edges::M, T::Vector{NT}, B::Vector{NT}) where {M<:SparseMatrixCSC, NT, W}
         dropzeros!(edges)
         check_bipartiteness(edges, T, B)
-        new{Bool,NT}(edges, T, B)
+        new{eltype(edges),NT}(edges, T, B)
     end
 end
 
-function BipartiteNetwork(A::M, T::Union{Vector{TT},Nothing}=nothing, B::Union{Vector{TT},Nothing}=nothing) where {M <: AbstractMatrix{Bool}, TT}
+function BipartiteNetwork(A::M, T::Union{Vector{TT},Nothing}=nothing, B::Union{Vector{TT},Nothing}=nothing) where {M <: AbstractMatrix, TT}
     if isnothing(B)
         B = "b".*string.(1:size(A, 2))
     else
@@ -68,7 +68,7 @@ function BipartiteNetwork(A::M, T::Union{Vector{TT},Nothing}=nothing, B::Union{V
     allunique(vcat(B,T)) || throw(ArgumentError("Bipartite networks cannot share species across levels"))
     isequal(length(T))(size(A,1)) || throw(ArgumentError("The matrix has the wrong number of top-level species"))
     isequal(length(B))(size(A,2)) || throw(ArgumentError("The matrix has the wrong number of bottom-level species"))
-    return BipartiteNetwork{Bool,eltype(T)}(sparse(A), T, B)
+    return BipartiteNetwork{eltype(M),eltype(T)}(sparse(A), T, B)
 end
 
 """
