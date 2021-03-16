@@ -66,6 +66,68 @@ function lp(N::T) where {T<:AbstractEcologicalNetwork}
   return (N, L)
 end
 
+
+function weighted_lp(N::T) where {T<:AbstractEcologicalNetwork}
+  L = Dict([species(N)[i]=>i for i in 1:richness(N)])
+  name2id_b = Dict([name=>i for (i, name) in enumerate(species(N, dims=2))])
+  name2id_t = Dict([name=>i for (i, name) in enumerate(species(N, dims=1))])
+
+  neighbors_b = Dict([s=>N[:,s] for s in species(N, dims=2)])
+  neighbors_t = Dict([s=>N[s,:] for s in species(N, dims=1)])
+
+  # Initial modularity
+  imod = Q(N, L)
+  amod = imod
+  improved = true
+
+  while improved
+    update_t = shuffle(species(N; dims=1))
+    update_b = shuffle(species(N; dims=2))
+
+    for s1 in update_t
+      linked = neighbors_t[s1]
+      labels = [L[s2] for s2 in linked]
+      if length(labels) > 0
+        counts = Dict()
+        for (neighbor, label) in zip(linked, labels)
+          counts[label] =
+          get(counts, label, 0) + getindex(N, name2id_t[s1], name2id_b[neighbor])
+        end
+        cmax = maximum(values(counts))
+        ok_keys = keys(filter(k -> k.second==cmax, counts))
+        if length(ok_keys) > 0
+          newlab = StatsBase.sample(collect(ok_keys))
+          L[s1] = newlab
+        end
+      end
+    end
+
+    for s2 in update_b
+      linked = neighbors_b[s2]
+      labels = [L[s1] for s1 in linked]
+      if length(labels) > 0
+        counts = Dict()
+        for (neighbor, label) in zip(linked, labels)
+          counts[label] =
+          get(counts, label, 0) + getindex(N, name2id_t[neighbor], name2id_b[s2])
+        end
+        cmax = maximum(values(counts))
+        ok_keys = keys(filter(k -> k.second==cmax, counts))
+        if length(ok_keys) > 0
+          newlab = StatsBase.sample(collect(ok_keys))
+          L[s2] = newlab
+        end
+      end
+    end
+
+    # Modularity improved?
+    amod = Q(N, L)
+    imod, improved = amod > imod ? (amod, true) : (amod, false)
+  end
+  tidy_modules!(L)
+  return (N, L)
+end
+
 """
     salp(N::T; θ::Float64=1.0, steps::Int64=10_000, λ::Float64=0.999, progress::Bool=false) where {T <: BipartiteNetwork}
 
